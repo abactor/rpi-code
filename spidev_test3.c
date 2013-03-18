@@ -32,6 +32,7 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
+int keep_alive;
 
 char *host_ip = "127.0.0.1"; 	//Here we have used localhost address for host machine 
 short host_port = 1234; 
@@ -336,7 +337,7 @@ int main(int argc, char *argv[])
 	int new_char=0;
 	int kbd_buff_len=0;
 	uint8_t input_buffer[RS_NUM_ACTUAL_DATA_BYTES+2]={'{',};
-	int keep_alive=1;
+	keep_alive=1;
 	signal(SIGINT, ctrlc);
 	init_rs();
 	init_rs_buff();
