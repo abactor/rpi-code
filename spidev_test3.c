@@ -401,6 +401,10 @@ int main(int argc, char *argv[])
 	//printf("Fungible$ ");
 	ret=0;
 	int z;
+	memset(datagram,0,RS_NUM_ACTUAL_DATA_BYTES+2);
+	datagram[0]='{';
+
+
 	while(keep_alive==1){
 		
 		ret=0;
@@ -420,18 +424,21 @@ int main(int argc, char *argv[])
 		
 		else {
 		    // one or both of the descriptors have data
-			puts("\nsocket is ready\n");
+			printf("\nsocket is ready\n");
 			if (FD_ISSET(host_sock, &readfds)) {
-				z=recv(host_sock, datagram, 15, 0);
+				z=recv(host_sock, &datagram[1], 14, 0);
+				//datagram[z+1] = 0;//already zero because of memset
 			
 				for(ret=0;ret<NUM_BOARDS;ret++){
 					memcpy(&tx[RS_BYTES_SENT*ret],&datagram[0],RS_NUM_ACTUAL_DATA_BYTES);
 				}
 			
 				transfer(fd);
-				datagram[z] = 0;
 				printf("New command is:%s\n", datagram);
-				bzero(datagram, 15);
+				//bzero(datagram, 15);
+				memset(datagram,0,RS_NUM_ACTUAL_DATA_BYTES+2);
+				datagram[0]='{';
+
 			}		
 	    	}
 		
