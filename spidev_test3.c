@@ -361,23 +361,12 @@ int main(int argc, char *argv[])
 	puts("Fungible$ ");
 	//printf("Fungible$ ");
 	ret=0;
-	set_conio_terminal_mode();
-	reset_terminal_mode();	//reset the terminal to normal mode	
-	putback_terminal_mode();
-
 	
 	while(keep_alive==1){
 		
 		ret=0;
-		new_char=getch(); /* get the character */
-		reset_terminal_mode();	//reset the terminal to normal mode	
-		
-		
-		
 		
 	//puts("Fungible$ ");
-		
-		
 		
 		if(new_char==0x1B){ //Escape key sent
 			keep_alive=0;
@@ -404,44 +393,20 @@ int main(int argc, char *argv[])
 			memcpy(&input_buffer[0],&default_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
 			kbd_buff_len=0;
 			continue;
-		//putback_terminal_mode();
-		//set_conio_terminal_mode();
+		
 			//printf("\r\nFungible$ ");
 		//	puts("Fungible$ ");
 		}
 		else if((new_char>=' ') && (kbd_buff_len<RS_NUM_ACTUAL_DATA_BYTES-1)){
 			input_buffer[++kbd_buff_len]=new_char;
 			input_buffer[kbd_buff_len+1]=0;
-		//reset_terminal_mode();	//reset the terminal to normal mode
-				//printf("%.*s",kbd_buff_len+1, input_buffer);
-				//printf("%.*s",kbd_buff_len+1, input_buffer);
-				//printf("THis is a test\r");
-			
+		
 			continue;
-		//putback_terminal_mode();
-		//set_conio_terminal_mode();
+
 		}
-				
-		//reset_terminal_mode();	//reset the terminal to normal mode
-		//printf("\r\n next char: %c \r\n",new_char);
-		//set_conio_terminal_mode();
-		
-		putback_terminal_mode();
-		
-		while (!kbhit()) {
-			/* do some work */
-			//this is where the 
-			transfer(fd);
-		//	printf("Nothing doing \t\t%u\r",ret);
-		
-		}
-		
-		
-		
 	}
 	
-	reset_terminal_mode();	//reset the terminal to normal mode
-	//reset_terminal_mode();	//reset the terminal to normal mode
+	
 	printf("\r\n\nClosing!\n\n");
 	
 	close(fd);
