@@ -400,7 +400,7 @@ int main(int argc, char *argv[])
 	puts("Fungible$ ");
 	//printf("Fungible$ ");
 	ret=0;
-	
+	int z;
 	while(keep_alive==1){
 		
 		ret=0;
@@ -424,11 +424,11 @@ int main(int argc, char *argv[])
 			if (FD_ISSET(host_sock, &readfds)) {
 				z=recv(host_sock, datagram, 15, 0);
 			
-			for(ret=0;ret<NUM_BOARDS;ret++){
-				memcpy(&tx[RS_BYTES_SENT*ret],&datagram[0],RS_NUM_ACTUAL_DATA_BYTES);
-			}
+				for(ret=0;ret<NUM_BOARDS;ret++){
+					memcpy(&tx[RS_BYTES_SENT*ret],&datagram[0],RS_NUM_ACTUAL_DATA_BYTES);
+				}
 			
-			transfer(fd);
+				transfer(fd);
 				datagram[z] = 0;
 				printf("New command is:%s\n", datagram);
 				bzero(datagram, 15);
