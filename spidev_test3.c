@@ -26,9 +26,20 @@
 #include <sys/select.h>
 #include <termios.h>
 #include <signal.h>
-
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
+
+char *host_ip = "127.0.0.1"; 	//Here we have used localhost address for host machine 
+short host_port = 1234; 
+int host_sock;
+char datagram[512];
+fd_set readfds;
+struct timeval tv;
+struct sockaddr_in host_add;
 
 static void pabort(const char *s)
 {
@@ -58,8 +69,6 @@ static uint16_t numbytes=RS_BYTES_SENT*NUM_BOARDS;
 //alternate define:
 #define RS_NUM_ACTUAL_DATA_BYTES (RS_BYTES_SENT-RS_NUM_PARITY_BYTES)	//25-10=15
 #define RS_NUM_ZERO_PAD (KK-RS_NUM_ACTUAL_DATA_BYTES)			//245-15=230
-
-uint8_t default_buff[15]={'{',0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 dtype rs_buff[NN];
 uint8_t tx[NUM_BOARDS*RS_BYTES_SENT]={
@@ -301,6 +310,25 @@ static void parse_opts(int argc, char *argv[])
 	}
 }
 
+int init_sockets(){
+int ret;
+	host_sock = socket(AF_INET, SOCK_DGRAM, 0);
+	printf("Host sock is %i\n\n",host_sock);
+	host_add.sin_family = AF_INET;
+	host_add.sin_port = htons(host_port);
+	host_add.sin_addr.s_addr = inet_addr(host_ip);
+	ret = bind(host_sock, (struct sockaddr *)&host_add, sizeof(host_add));
+
+	return ret;
+
+}
+
+
+void ctrlc(int sig)
+{
+    keep_alive = 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret = 0;
@@ -309,9 +337,15 @@ int main(int argc, char *argv[])
 	int kbd_buff_len=0;
 	uint8_t input_buffer[RS_NUM_ACTUAL_DATA_BYTES+2]={'{',};
 	int keep_alive=1;
-	
+	signal(SIGINT, ctrlc);
 	init_rs();
 	init_rs_buff();
+	if(init_sockets()!=0){
+		puts("Problem binding socket!");
+		keep_alive=0;
+		goto done;
+	}
+	
 	
 	parse_opts(argc, argv);
 
@@ -357,7 +391,11 @@ int main(int argc, char *argv[])
 	printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
 
 	transfer(fd);
-	memcpy(&input_buffer[0],&default_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	//clear buffer to default.
+	
+	//clear buffer to default.
+	memset(input_buffer,0,RS_NUM_ACTUAL_DATA_BYTES+2);
+	input_buffer[0]='{';
+//	memcpy(&input_buffer[0],&default_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	
 	puts("Fungible$ ");
 	//printf("Fungible$ ");
 	ret=0;
@@ -366,11 +404,41 @@ int main(int argc, char *argv[])
 		
 		ret=0;
 		
-	//puts("Fungible$ ");
+		FD_ZERO(&readfds);
+		FD_SET(host_sock, &readfds);
+		tv.tv_sec = 0;
+		tv.tv_usec = 10000;
+		ret = select(host_sock+1, &readfds, NULL, NULL, &tv);
 		
+		if (ret == -1) {
+		    puts("select error"); // error occurred in select()
+		} 
+		else if (ret == 0) {
+		    //printf("\nTimeout occurred!  Error# %u\n",err_num++);
+		} 
+		
+		else {
+		    // one or both of the descriptors have data
+			puts("\nsocket is ready\n");
+			if (FD_ISSET(host_sock, &readfds)) {
+				z=recv(host_sock, datagram, 15, 0);
+			
+			for(ret=0;ret<NUM_BOARDS;ret++){
+				memcpy(&tx[RS_BYTES_SENT*ret],&datagram[0],RS_NUM_ACTUAL_DATA_BYTES);
+			}
+			
+			transfer(fd);
+				datagram[z] = 0;
+				printf("New command is:%s\n", datagram);
+				bzero(datagram, 15);
+			}		
+	    	}
+		
+	//puts("Fungible$ ");
+	/*
+	//this is old keyboard code
 		if(new_char==0x1B){ //Escape key sent
 			keep_alive=0;
-			continue;
 		}
 		
 		else if (new_char=='\r'){
@@ -380,7 +448,6 @@ int main(int argc, char *argv[])
 		else if(new_char=='\n'){ //command ended
 			//copy buffer contents and send
 			//then clear buffer
-		//reset_terminal_mode();	//reset the terminal to normal mode
 
 			//printf("%.*s \n",kbd_buff_len+2, input_buffer);		
 			printf("Sending Buffer: %s\n", input_buffer);		
@@ -390,26 +457,31 @@ int main(int argc, char *argv[])
 			}
 			transfer(fd);
 			puts("Fungible$ ");
-			memcpy(&input_buffer[0],&default_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
+			//clear buffer to default.
+			memset(input_buffer,0,RS_NUM_ACTUAL_DATA_BYTES+2);
+			input_buffer[0]='{';
+		//	memcpy(&input_buffer[0],&default_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
 			kbd_buff_len=0;
-			continue;
-		
+
 			//printf("\r\nFungible$ ");
 		//	puts("Fungible$ ");
 		}
 		else if((new_char>=' ') && (kbd_buff_len<RS_NUM_ACTUAL_DATA_BYTES-1)){
 			input_buffer[++kbd_buff_len]=new_char;
 			input_buffer[kbd_buff_len+1]=0;
-		
-			continue;
-
 		}
+	*/	
+	
+	
+	
 	}
 	
+	done:
+		//do cleanup here
+		close(host_sock);
+		printf("\r\n\nClosing!\n\n");
 	
-	printf("\r\n\nClosing!\n\n");
-	
-	close(fd);
+		close(fd);
 	
 	return ret;
 }
