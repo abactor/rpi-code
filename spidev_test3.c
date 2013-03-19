@@ -81,6 +81,7 @@ uint8_t tx[NUM_BOARDS*RS_BYTES_SENT]={
 		'{','!','A','2',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		'{','!','A','1',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	};		//initialize with enumerated SPI address values
+uint8_t rx[ARRAY_SIZE(tx)] = {0, };
 
 
 struct termios orig_termios;
@@ -145,11 +146,12 @@ int i;
 
 }
 
-static void transfer(int fd)
+static int transfer(int fd)
 {
 	int ret,i,ret_indx;
 	int er_pos[RS_NUM_PARITY_BYTES];
 	int num_ers=0;
+	int ret_val=0;
 //	uint8_t tx[] = "{6This is the raspi val!}{5This is the raspi val!}{4This is the raspi val!}{3This is the raspi val!}{2This is the raspi val!}{1This is the raspi val!}{0This is the null val!}";
 	
 	
@@ -164,7 +166,6 @@ static void transfer(int fd)
 	
 		//uint8_t tx[]="{6This is the raspi val!}{5This is the raspi val!}{4This is the raspi val!}{3This is the raspi val!}{2This is the raspi val!}{1This is the raspi val!}";
 	//uint8_t tx[] = {"We should be sending 32 bytes+2!!            "};
-	uint8_t rx[ARRAY_SIZE(tx)] = {0, };
 	
 	struct spi_ioc_transfer tr = {
 		.tx_buf = (unsigned long)tx,
@@ -187,7 +188,7 @@ static void transfer(int fd)
 		if (rs_buff[0]!='{'){
 			er_pos[0]=0;
 			num_ers=1;
-	//		printf("\nFirst byte \'{\' erased from board %u\n",(ret_indx/RS_BYTES_SENT));
+//			printf("\nFirst byte \'{\' erased from board %u\n",(ret_indx/RS_BYTES_SENT));
 		}
 		else{
 			num_ers=0;
@@ -198,12 +199,14 @@ static void transfer(int fd)
 		if(i>0){
 			memcpy(&rx[ret_indx],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	//if data is corrected, copy it over
 	//		printf("%u Bytes corrected from board #%u\n",i,(ret_indx/RS_BYTES_SENT));
+			ret_val+=i;
 		}
 		if(i==0){
 	//		printf("All bytes correct from board #%u\n",(ret_indx/RS_BYTES_SENT));
 		}
 		if(i==-1){
 			//printf("Too many corrupted bytes from board #%u\n",(ret_indx/RS_BYTES_SENT));
+			ret_val=-1;
 		}
 	}
 /*
@@ -225,6 +228,7 @@ static void transfer(int fd)
 	}
 	puts("");
 */	
+	return ret_val;
     
 }
 
@@ -393,7 +397,7 @@ int main(int argc, char *argv[])
 	printf("bits per word: %d\n", bits);
 	printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
 
-	transfer(fd);
+	ret=transfer(fd);
 	
 	//clear buffer to default.
 	memset(input_buffer,0,RS_NUM_ACTUAL_DATA_BYTES+2);
@@ -402,7 +406,7 @@ int main(int argc, char *argv[])
 	puts("Fungible$ ");
 	//printf("Fungible$ ");
 	ret=0;
-	int z;
+	int z,sink;
 	memset(datagram,0,RS_NUM_ACTUAL_DATA_BYTES+2);
 	datagram[0]='{';
 
@@ -414,7 +418,7 @@ int main(int argc, char *argv[])
 		FD_ZERO(&readfds);
 		FD_SET(host_sock, &readfds);
 		tv.tv_sec = 0;
-		tv.tv_usec = 10000;
+		tv.tv_usec = 100;
 		ret = select(host_sock+1, &readfds, NULL, NULL, &tv);
 		
 		if (ret == -1) {
@@ -426,7 +430,7 @@ int main(int argc, char *argv[])
 		
 		else {
 		    // one or both of the descriptors have data
-			printf("\nsocket is ready\n");
+			//printf("\nsocket is ready\n");
 			if (FD_ISSET(host_sock, &readfds)) {
 				z=recv(host_sock, &datagram[1], 14, 0);
 				//datagram[z+1] = 0;//already zero because of memset
@@ -435,18 +439,29 @@ int main(int argc, char *argv[])
 					memcpy(&tx[RS_BYTES_SENT*ret],&datagram[0],RS_NUM_ACTUAL_DATA_BYTES);
 				}
 			
-				transfer(fd);
+				ret=transfer(fd);
 				printf("New command is:%s\n", datagram);
 				//bzero(datagram, 15);
+				
+				for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
+					if (!(ret % 25))
+						puts("");
+					printf("%c", rx[ret]);
+					//printf("%.2X ", rx[ret]);
+
+				}
+
+				puts("");
+
 				memset(datagram,0,RS_NUM_ACTUAL_DATA_BYTES+2);
 				datagram[0]='{';
 
 			}		
 	    	}
 
-		transfer(fd);
+		sink=transfer(fd);
 		ntv.tv_sec=0;
-		ntv.tv_nsec=100;
+		ntv.tv_nsec=100000;
 		nanosleep(&ntv,NULL);
 
 		
