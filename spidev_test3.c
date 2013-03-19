@@ -40,6 +40,7 @@ int host_sock;
 char datagram[512];
 fd_set readfds;
 struct timeval tv;
+struct timespec ntv;
 struct sockaddr_in host_add;
 
 static void pabort(const char *s)
@@ -157,7 +158,7 @@ static void transfer(int fd)
 		encode_rs(&rs_buff[0],&rs_buff[KK]);
 		memcpy(&tx[i*RS_BYTES_SENT],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
 		memcpy(&tx[(i*RS_BYTES_SENT)+RS_NUM_ACTUAL_DATA_BYTES],&rs_buff[KK],RS_NUM_PARITY_BYTES);
-		printf("Sending %.*s \n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT]);
+	//	printf("Sending %.*s \n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT]);
 	}
 		
 	
@@ -186,7 +187,7 @@ static void transfer(int fd)
 		if (rs_buff[0]!='{'){
 			er_pos[0]=0;
 			num_ers=1;
-			printf("\nFirst byte \'{\' erased from board %u\n",(ret_indx/RS_BYTES_SENT));
+	//		printf("\nFirst byte \'{\' erased from board %u\n",(ret_indx/RS_BYTES_SENT));
 		}
 		else{
 			num_ers=0;
@@ -196,15 +197,16 @@ static void transfer(int fd)
 		
 		if(i>0){
 			memcpy(&rx[ret_indx],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	//if data is corrected, copy it over
-			printf("%u Bytes corrected from board #%u\n",i,(ret_indx/RS_BYTES_SENT));
+	//		printf("%u Bytes corrected from board #%u\n",i,(ret_indx/RS_BYTES_SENT));
 		}
 		if(i==0){
-			printf("All bytes correct from board #%u\n",(ret_indx/RS_BYTES_SENT));
+	//		printf("All bytes correct from board #%u\n",(ret_indx/RS_BYTES_SENT));
 		}
 		if(i==-1){
-			printf("Too many corrupted bytes from board #%u\n",(ret_indx/RS_BYTES_SENT));
+			//printf("Too many corrupted bytes from board #%u\n",(ret_indx/RS_BYTES_SENT));
 		}
 	}
+/*
 	for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
 		if (!(ret % 25))
 			puts("");
@@ -222,7 +224,7 @@ static void transfer(int fd)
 
 	}
 	puts("");
-	
+*/	
     
 }
 
@@ -441,6 +443,12 @@ int main(int argc, char *argv[])
 
 			}		
 	    	}
+
+		transfer(fd);
+		ntv.tv_sec=0;
+		ntv.tv_nsec=100;
+		nanosleep(&ntv,NULL);
+
 		
 	//puts("Fungible$ ");
 	/*
