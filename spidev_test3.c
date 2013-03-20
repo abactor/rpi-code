@@ -139,10 +139,13 @@ int getch()
 
 static void init_rs_buff(){
 int i;
+	memset(rs_buff,0,NN);
+	/*
 	for (i=0;i<NN;i++){
 		rs_buff[i]=0;
 		//printf("This is the %ith element of rs_buff: %u\n",i,rs_buff[i]);
 	}
+	*/
 
 }
 
@@ -418,7 +421,7 @@ int main(int argc, char *argv[])
 		FD_ZERO(&readfds);
 		FD_SET(host_sock, &readfds);
 		tv.tv_sec = 0;
-		tv.tv_usec = 100;
+		tv.tv_usec = 10000;
 		ret = select(host_sock+1, &readfds, NULL, NULL, &tv);
 		
 		if (ret == -1) {
@@ -433,16 +436,29 @@ int main(int argc, char *argv[])
 			//printf("\nsocket is ready\n");
 			if (FD_ISSET(host_sock, &readfds)) {
 				z=recv(host_sock, &datagram[1], 14, 0);
-				//datagram[z+1] = 0;//already zero because of memset
+				//datagram[z] = 0;//replace \n with NULL
+				datagram[z] = 0;//replace \n with NULL
 			
 				for(ret=0;ret<NUM_BOARDS;ret++){
 					memcpy(&tx[RS_BYTES_SENT*ret],&datagram[0],RS_NUM_ACTUAL_DATA_BYTES);
+					printf("tx buff:\nSTART%sEND\n",&tx[RS_BYTES_SENT*ret]);
 				}
 			
 				ret=transfer(fd);
 				printf("New command is:%s\n", datagram);
 				//bzero(datagram, 15);
 				
+				for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
+					if (!(ret % 25))
+						puts("");
+//					printf("%s", tx[ret]);
+					printf("%.2X ", tx[ret]);
+
+				}
+				puts("");
+				puts("Now for returned");
+/*				
+*/
 				for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
 					if (!(ret % 25))
 						puts("");
@@ -453,17 +469,35 @@ int main(int argc, char *argv[])
 
 				puts("");
 
-				memset(datagram,0,RS_NUM_ACTUAL_DATA_BYTES+2);
+
+
+				puts("\n");
+				for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
+					if (!(ret % 25))
+						puts("");
+					//printf("%c", rx[ret]);
+					printf("%.2X ", rx[ret]);
+
+				}
+				puts("");
+				
+				puts("are we getting to here?");
+
+				//memset(datagram,0,RS_NUM_ACTUAL_DATA_BYTES+2);
 				datagram[0]='{';
+				//memset(tx,0,NUM_BOARDS*RS_BYTES_SENT);
+				//memset(rx,0,NUM_BOARDS*RS_BYTES_SENT);
+				//memset(rs_buff,0,NN);
+				puts("or here?");
 
 			}		
 	    	}
 
 		sink=transfer(fd);
 		ntv.tv_sec=0;
-		ntv.tv_nsec=100000;
+		ntv.tv_nsec=10000000;
 		nanosleep(&ntv,NULL);
-
+		//memset(tx,0,NUM_BOARDS*RS_BYTES_SENT);
 		
 	//puts("Fungible$ ");
 	/*
