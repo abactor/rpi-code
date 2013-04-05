@@ -403,8 +403,8 @@ int main(int argc, char *argv[])
 	ret=transfer(fd);
 	
 	//clear buffer to default.
-	memset(input_buffer,0,RS_NUM_ACTUAL_DATA_BYTES+2);
-	input_buffer[0]='{';
+	//memset(input_buffer,0,RS_NUM_ACTUAL_DATA_BYTES+2);
+	//input_buffer[0]='{';
 //	memcpy(&input_buffer[0],&default_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	
 	puts("Fungible$ ");
 	//printf("Fungible$ ");
@@ -435,6 +435,7 @@ int main(int argc, char *argv[])
 		    // one or both of the descriptors have data
 			//printf("\nsocket is ready\n");
 			if (FD_ISSET(host_sock, &readfds)) {
+				memset(&datagram[1],0,RS_NUM_ACTUAL_DATA_BYTES+1);
 				z=recv(host_sock, &datagram[1], 14, 0);
 				//datagram[z] = 0;//replace \n with NULL
 				datagram[z] = 0;//replace \n with NULL
@@ -484,19 +485,21 @@ int main(int argc, char *argv[])
 				puts("are we getting to here?");
 
 				//memset(datagram,0,RS_NUM_ACTUAL_DATA_BYTES+2);
-				datagram[0]='{';
+				//datagram[0]='{';
 				//memset(tx,0,NUM_BOARDS*RS_BYTES_SENT);
 				//memset(rx,0,NUM_BOARDS*RS_BYTES_SENT);
 				//memset(rs_buff,0,NN);
-				puts("or here?");
-
-			}		
+			}
+			
+			memset(tx,0,NUM_BOARDS*RS_BYTES_SENT);
+			puts("or here?");		
 	    	}
 
-		sink=transfer(fd);
+		
 		ntv.tv_sec=0;
 		ntv.tv_nsec=10000000;
 		nanosleep(&ntv,NULL);
+		sink=transfer(fd);
 		//memset(tx,0,NUM_BOARDS*RS_BYTES_SENT);
 		
 	//puts("Fungible$ ");
