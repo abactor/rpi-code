@@ -163,7 +163,7 @@ static int transfer(int fd)
 		encode_rs(&rs_buff[0],&rs_buff[KK]);
 		memcpy(&tx[i*RS_BYTES_SENT],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
 		memcpy(&tx[(i*RS_BYTES_SENT)+RS_NUM_ACTUAL_DATA_BYTES],&rs_buff[KK],RS_NUM_PARITY_BYTES);
-	//	printf("Sending %.*s \n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT]);
+		printf("Sending %.*s \n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT]);
 	}
 		
 	
@@ -421,7 +421,7 @@ int main(int argc, char *argv[])
 		FD_ZERO(&readfds);
 		FD_SET(host_sock, &readfds);
 		tv.tv_sec = 0;
-		tv.tv_usec = 10000;
+		tv.tv_usec = 1000000;
 		ret = select(host_sock+1, &readfds, NULL, NULL, &tv);
 		
 		if (ret == -1) {
@@ -497,7 +497,7 @@ int main(int argc, char *argv[])
 
 		
 		ntv.tv_sec=0;
-		ntv.tv_nsec=10000000;
+		ntv.tv_nsec=100;
 		nanosleep(&ntv,NULL);
 		sink=transfer(fd);
 		//memset(tx,0,NUM_BOARDS*RS_BYTES_SENT);
