@@ -193,7 +193,17 @@ static int transfer(int fd)
 		.bits_per_word = bits,
 	};
 	assert (numbytes<=ARRAY_SIZE(tx));
+	
+	gettimeofday(&tick, NULL);
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+	gettimeofday(&tock, NULL);
+		
+	tdiff=1000000*((long)tock.tv_sec-(long)tick.tv_sec);	//seconds to microseconds
+	tdiff+=((long)tock.tv_usec-(long)tick.tv_usec);		//add microseconds		
+		
+	printf("time to transfer: %.3f ms\n",(double)(tdiff/1000.0));
+	
+	
 	
 	gettimeofday(&time_holder, NULL);
 	//time_stamp=1000000*((long)time_holder.tv_sec);	//seconds to microseconds
@@ -229,7 +239,12 @@ static int transfer(int fd)
 		tdiff+=((long)tock.tv_usec-(long)tick.tv_usec);		//add microseconds		
 		
 		printf("time to decode: %.3f ms\n",(double)(tdiff/1000.0));
-		
+		if (i==-1){
+			puts("Too many errors to decode.");
+		}
+		else if(i>0){
+			printf("%u errors found\n",i);
+		}
 		
 		if(i>0){
 			memcpy(&rx[ret_indx],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	//if data is corrected, copy it over
