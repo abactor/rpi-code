@@ -29,6 +29,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/time.h>                // for gettimeofday()
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -49,6 +50,10 @@ static void pabort(const char *s)
 	abort();
 }
 
+struct timeval time_holder;
+struct timeval time_start;
+long	time_stamp;
+
 static const char *device = "/dev/spidev0.0";
 static uint8_t mode;
 static uint8_t bits = 8;
@@ -58,6 +63,7 @@ static uint16_t delay;
 #define NUM_BOARDS 6
 #define RS_BYTES_SENT 165 
 static uint16_t numbytes=RS_BYTES_SENT*NUM_BOARDS;
+
 //static uint16_t numbytes=25*7;
 
 
@@ -158,15 +164,18 @@ static int transfer(int fd)
 	int er_pos[RS_NUM_PARITY_BYTES];
 	int num_ers=0;
 	int ret_val=0;
+	struct timeval tick,tock;
+	long tdiff;
 //	uint8_t tx[] = "{6This is the raspi val!}{5This is the raspi val!}{4This is the raspi val!}{3This is the raspi val!}{2This is the raspi val!}{1This is the raspi val!}{0This is the null val!}";
 	
 	
 	for (i=0;i<NUM_BOARDS;i++){
 		memcpy(&rs_buff[0],&tx[i*RS_BYTES_SENT],RS_NUM_ACTUAL_DATA_BYTES);
+		//no need to encode data if all data is zero
 		encode_rs(&rs_buff[0],&rs_buff[KK]);
 		memcpy(&tx[i*RS_BYTES_SENT],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
 		memcpy(&tx[(i*RS_BYTES_SENT)+RS_NUM_ACTUAL_DATA_BYTES],&rs_buff[KK],RS_NUM_PARITY_BYTES);
-		printf("Sending %.*s %li\n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT],(i*RS_BYTES_SENT));
+		//printf("Sending %.*s %li\n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT],(i*RS_BYTES_SENT));
 		
 	}
 		
@@ -185,6 +194,18 @@ static int transfer(int fd)
 	};
 	assert (numbytes<=ARRAY_SIZE(tx));
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+	
+	gettimeofday(&time_holder, NULL);
+	//time_stamp=1000000*((long)time_holder.tv_sec);	//seconds to microseconds
+	//time_stamp+=((long)time_holder.tv_usec);		//add microseconds		
+	
+	
+	time_stamp=1000000*((long)time_holder.tv_sec-(long)time_start.tv_sec);	//seconds to microseconds
+	time_stamp+=((long)time_holder.tv_usec-(long)time_start.tv_usec);		//add microseconds		
+	
+	//time_stamp=1000000.0*(time_holder.tv_sec-time_start.tv_sec);	//seconds to microseconds
+	//time_stamp+=(time_holder.tv_usec-time_start.tv_usec);		//add microseconds		
+	
 	if (ret < 1)
 		pabort("can't send spi message");
 
@@ -200,8 +221,15 @@ static int transfer(int fd)
 		else{
 			num_ers=0;
 		}
-
+		gettimeofday(&tick, NULL);
 		i=eras_dec_rs(rs_buff,er_pos,num_ers);		//decode data
+		gettimeofday(&tock, NULL);
+		
+		tdiff=1000000*((long)tock.tv_sec-(long)tick.tv_sec);	//seconds to microseconds
+		tdiff+=((long)tock.tv_usec-(long)tick.tv_usec);		//add microseconds		
+		
+		printf("time to decode: %.3f ms\n",(double)(tdiff/1000.0));
+		
 		
 		if(i>0){
 			memcpy(&rx[ret_indx],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	//if data is corrected, copy it over
@@ -217,8 +245,8 @@ static int transfer(int fd)
 		}
 	}
 	
-	puts("");
-	puts("Now for returned");
+	//puts("");
+	//puts("Now for returned");
 	
 	for (ret = 0; ret < ARRAY_SIZE(tx); ret+=RS_BYTES_SENT) {
 		//if (!(ret % 25))
@@ -229,7 +257,14 @@ static int transfer(int fd)
 			printf("From board %i:\t",ret/RS_BYTES_SENT);
 			printf("%s", &rx[ret]);
 			puts("");
+			int board_time;
+			memcpy(&board_time,&rx[3],4);
+			printf("Board metadata: Board Num: %u\t Ring buffer index: %u\t Board time: %u",rx[1],rx[2],board_time);
+			puts("");
+			printf("Data acquired at local time: %.3f ms",(double)(time_stamp/1000.0));
+			puts("");
 			int temp_incr;
+		/*
 			for (temp_incr=0;temp_incr<RS_NUM_ACTUAL_DATA_BYTES;temp_incr++){
 				if (!(temp_incr % 25))
 					puts("");
@@ -237,7 +272,7 @@ static int transfer(int fd)
 				printf("%.3d ", rx[temp_incr+ret]);
 			}
 			puts("");
-			
+		*/	
 		}
 		
 	}
@@ -368,6 +403,7 @@ int main(int argc, char *argv[])
 	int new_char=0;
 	int kbd_buff_len=0;
 	int i;
+	gettimeofday(&time_start, NULL);
 	memset(tx,0,numbytes);
 	for (i=0;i<NUM_BOARDS;i++){
 		int offset=i*RS_BYTES_SENT;
@@ -441,9 +477,10 @@ int main(int argc, char *argv[])
 	//printf("Fungible$ ");
 	ret=0;
 	int z,sink;
+	int err_num=0;
 	memset(datagram,0,RS_NUM_ACTUAL_DATA_BYTES+2);
 	datagram[0]='{';
-
+	
 
 	while(keep_alive==1){
 		
@@ -452,7 +489,7 @@ int main(int argc, char *argv[])
 		FD_ZERO(&readfds);
 		FD_SET(host_sock, &readfds);
 		tv.tv_sec = 0;
-		tv.tv_usec = 1000000;
+		tv.tv_usec = 3000;
 		ret = select(host_sock+1, &readfds, NULL, NULL, &tv);
 		
 		if (ret == -1) {
@@ -529,7 +566,7 @@ int main(int argc, char *argv[])
 		
 		ntv.tv_sec=0;
 		ntv.tv_nsec=100;
-		nanosleep(&ntv,NULL);
+	//	nanosleep(&ntv,NULL);
 		sink=transfer(fd);
 		
 
