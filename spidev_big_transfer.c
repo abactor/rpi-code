@@ -74,7 +74,8 @@ static uint16_t numbytes=RS_BYTES_SENT*NUM_BOARDS;
 
 dtype rs_buff[NN];
 //will have to change this properly
-uint8_t tx[NUM_BOARDS*RS_BYTES_SENT]={
+uint8_t tx[NUM_BOARDS*RS_BYTES_SENT];
+/*={
 		'{','!','A','6',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		'{','!','A','5',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		'{','!','A','4',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -82,6 +83,7 @@ uint8_t tx[NUM_BOARDS*RS_BYTES_SENT]={
 		'{','!','A','2',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		'{','!','A','1',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	};		//initialize with enumerated SPI address values
+*/
 uint8_t rx[ARRAY_SIZE(tx)] = {0, };
 
 
@@ -164,7 +166,8 @@ static int transfer(int fd)
 		encode_rs(&rs_buff[0],&rs_buff[KK]);
 		memcpy(&tx[i*RS_BYTES_SENT],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
 		memcpy(&tx[(i*RS_BYTES_SENT)+RS_NUM_ACTUAL_DATA_BYTES],&rs_buff[KK],RS_NUM_PARITY_BYTES);
-		printf("Sending %.*s \n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT]);
+		printf("Sending %.*s %li\n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT],(i*RS_BYTES_SENT));
+		
 	}
 		
 	
@@ -213,15 +216,32 @@ static int transfer(int fd)
 			ret_val=-1;
 		}
 	}
-/*
-	for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
-		if (!(ret % 25))
+	
+	puts("");
+	puts("Now for returned");
+	
+	for (ret = 0; ret < ARRAY_SIZE(tx); ret+=RS_BYTES_SENT) {
+		//if (!(ret % 25))
+		//	puts("");
+		
+		if(rx[ret]=='{'){
 			puts("");
-		printf("%c", rx[ret]);
-		//printf("%.2X ", rx[ret]);
-
+			printf("From board %i:\t",ret/RS_BYTES_SENT);
+			printf("%s", &rx[ret]);
+			puts("");
+			int temp_incr;
+			for (temp_incr=0;temp_incr<RS_NUM_ACTUAL_DATA_BYTES;temp_incr++){
+				if (!(temp_incr % 25))
+					puts("");
+				//printf("%.2X ", rx[temp_incr+ret]);
+				printf("%.3d ", rx[temp_incr+ret]);
+			}
+			puts("");
+			
+		}
+		
 	}
-
+/*
 	puts("\n");
 	for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
 		if (!(ret % 25))
@@ -230,8 +250,9 @@ static int transfer(int fd)
 		printf("%.2X ", rx[ret]);
 
 	}
+	*/
 	puts("");
-*/	
+	
 	return ret_val;
     
 }
@@ -346,6 +367,15 @@ int main(int argc, char *argv[])
 	int fd;
 	int new_char=0;
 	int kbd_buff_len=0;
+	int i;
+	memset(tx,0,numbytes);
+	for (i=0;i<NUM_BOARDS;i++){
+		int offset=i*RS_BYTES_SENT;
+		tx[offset]='{';
+		tx[offset+1]='!';
+		tx[offset+2]='A';
+		tx[offset+3]=i+0x31;//add '1' for ASCII offset
+	}
 	uint8_t input_buffer[RS_NUM_ACTUAL_DATA_BYTES+2]={'{',};
 	keep_alive=1;
 	signal(SIGINT, ctrlc);
@@ -501,6 +531,8 @@ int main(int argc, char *argv[])
 		ntv.tv_nsec=100;
 		nanosleep(&ntv,NULL);
 		sink=transfer(fd);
+		
+
 		//memset(tx,0,NUM_BOARDS*RS_BYTES_SENT);
 		
 	//puts("Fungible$ ");
