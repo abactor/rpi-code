@@ -443,6 +443,9 @@ void ctrlc(int sig)
 
 int main(int argc, char *argv[])
 {
+	struct timeval tick,tock;
+	long tdiff;
+	
 	int ret = 0;
 	int fd;
 	int new_char=0;
@@ -622,9 +625,24 @@ int main(int argc, char *argv[])
 		ntv.tv_sec=0;
 		ntv.tv_nsec=100;
 	//	nanosleep(&ntv,NULL);
-		sink=transfer(fd);
+		//get SPI data//
+		sink=transfer(fd);  
+		
+		
+		//gettimeofday(&tick, NULL);
+		
+		//send data to another program using sockets//
 		sink = sendto(remote_sock, rx, strlen(rx), 0, (struct sockaddr *)&remote_add, sizeof(remote_add));
-
+		
+		/*
+		gettimeofday(&tock, NULL);
+		tdiff=1000000*((long)tock.tv_sec-(long)tick.tv_sec);	//seconds to microseconds
+		tdiff+=((long)tock.tv_usec-(long)tick.tv_usec);		//add microseconds		
+		
+		printf("time to send socket data: %.3f ms\n",(double)(tdiff/1000.0));
+		*/
+		
+		
 		//memset(tx,0,NUM_BOARDS*RS_BYTES_SENT);
 		
 	//puts("Fungible$ ");

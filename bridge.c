@@ -46,15 +46,15 @@ int main(int argc, char **argv){
 	int x, z,fd;
 	char *host_ip = "127.0.0.1";
 	short host_port = 1235;
-	char *remote_ip = "127.0.0.1";
-	short remote_port = 1234;
+	//char *remote_ip = "127.0.0.1";
+	//short remote_port = 1234;
 	int i;
 	int host_sock, remote_sock;
 	char datagram[512];
 	int remote_len;
 	
 	struct sockaddr_in host_add;
-	struct sockaddr_in remote_add;
+	//struct sockaddr_in remote_add;
 
 	keep_alive=1;
 	//signal(SIGINT, ctrlc);
@@ -66,11 +66,13 @@ int main(int argc, char **argv){
 	host_add.sin_addr.s_addr = inet_addr(host_ip);
 
 	z = bind(host_sock, (struct sockaddr *)&host_add, sizeof(host_add));
+	
+	/*
 	remote_sock = socket(AF_INET, SOCK_DGRAM, 0);
 	remote_add.sin_family = AF_INET;
 	remote_add.sin_port = htons(remote_port);
 	remote_add.sin_addr.s_addr = inet_addr(remote_ip);
-	
+	*/
 	
 	while(keep_alive){
 		int ret,i,ret_indx;
@@ -120,7 +122,7 @@ int main(int argc, char **argv){
 	*/
 
 	}
-	close(remote_sock);
+	//close(remote_sock);
 	close(host_sock);
 	return 0;
 }
