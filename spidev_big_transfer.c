@@ -158,8 +158,7 @@ int i;
 
 }
 
-static int transfer(int fd)
-{
+static int transfer(int fd){
 	int ret,i,ret_indx;
 	int er_pos[RS_NUM_PARITY_BYTES];
 	int num_ers=0;
@@ -168,17 +167,18 @@ static int transfer(int fd)
 	long tdiff;
 //	uint8_t tx[] = "{6This is the raspi val!}{5This is the raspi val!}{4This is the raspi val!}{3This is the raspi val!}{2This is the raspi val!}{1This is the raspi val!}{0This is the null val!}";
 	
-	
+	/*
 	for (i=0;i<NUM_BOARDS;i++){
 		memcpy(&rs_buff[0],&tx[i*RS_BYTES_SENT],RS_NUM_ACTUAL_DATA_BYTES);
 		//no need to encode data if all data is zero
+		//should really just send already encoded message, don't do that here!!
 		encode_rs(&rs_buff[0],&rs_buff[KK]);
 		memcpy(&tx[i*RS_BYTES_SENT],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
 		memcpy(&tx[(i*RS_BYTES_SENT)+RS_NUM_ACTUAL_DATA_BYTES],&rs_buff[KK],RS_NUM_PARITY_BYTES);
 		//printf("Sending %.*s %li\n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT],(i*RS_BYTES_SENT));
 		
 	}
-		
+	*/
 	
 		//uint8_t tx[]="{6This is the raspi val!}{5This is the raspi val!}{4This is the raspi val!}{3This is the raspi val!}{2This is the raspi val!}{1This is the raspi val!}";
 	//uint8_t tx[] = {"We should be sending 32 bytes+2!!            "};
@@ -201,7 +201,7 @@ static int transfer(int fd)
 	tdiff=1000000*((long)tock.tv_sec-(long)tick.tv_sec);	//seconds to microseconds
 	tdiff+=((long)tock.tv_usec-(long)tick.tv_usec);		//add microseconds		
 		
-	printf("time to transfer: %.3f ms\n",(double)(tdiff/1000.0));
+	////printf("time to transfer: %.3f ms\n",(double)(tdiff/1000.0));
 	
 	
 	
@@ -219,11 +219,14 @@ static int transfer(int fd)
 	if (ret < 1)
 		pabort("can't send spi message");
 
+		
+//perhaps move this to outside transfer call
+//data only needs to be decoded before it's used
     for (ret_indx=0;ret_indx<(NUM_BOARDS*RS_BYTES_SENT);ret_indx+=RS_BYTES_SENT){
 		memcpy(&rs_buff[0],&rx[ret_indx],RS_NUM_ACTUAL_DATA_BYTES);
 		memcpy(&rs_buff[KK],&rx[ret_indx+RS_NUM_ACTUAL_DATA_BYTES],RS_NUM_PARITY_BYTES);
-
-		if (rs_buff[0]!='{'){
+		/*
+		if (rs_buff[0]!='{'){//not properly framed, throw it out?
 			er_pos[0]=0;
 			num_ers=1;
 //			printf("\nFirst byte \'{\' erased from board %u\n",(ret_indx/RS_BYTES_SENT));
@@ -231,13 +234,14 @@ static int transfer(int fd)
 		else{
 			num_ers=0;
 		}
+		*/
 		gettimeofday(&tick, NULL);
 		i=eras_dec_rs(rs_buff,er_pos,num_ers);		//decode data
 		gettimeofday(&tock, NULL);
 		
 		tdiff=1000000*((long)tock.tv_sec-(long)tick.tv_sec);	//seconds to microseconds
 		tdiff+=((long)tock.tv_usec-(long)tick.tv_usec);		//add microseconds		
-		
+		/*
 		printf("time to decode: %.3f ms\n",(double)(tdiff/1000.0));
 		if (i==-1){
 			puts("Too many errors to decode.");
@@ -245,13 +249,14 @@ static int transfer(int fd)
 		else if(i>0){
 			printf("%u errors found\n",i);
 		}
-		
+		*/
 		if(i>0){
-			memcpy(&rx[ret_indx],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	//if data is corrected, copy it over
+			memcpy(&rx[ret_indx],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	//if data is corrected, copy it over---return corrected
 	//		printf("%u Bytes corrected from board #%u\n",i,(ret_indx/RS_BYTES_SENT));
 			ret_val+=i;
 		}
 		if(i==0){
+		
 	//		printf("All bytes correct from board #%u\n",(ret_indx/RS_BYTES_SENT));
 		}
 		if(i==-1){
@@ -268,6 +273,7 @@ static int transfer(int fd)
 		//	puts("");
 		
 		if(rx[ret]=='{'){
+		/*
 			puts("");
 			printf("From board %i:\t",ret/RS_BYTES_SENT);
 			printf("%s", &rx[ret]);
@@ -278,8 +284,9 @@ static int transfer(int fd)
 			puts("");
 			printf("Data acquired at local time: %.3f ms",(double)(time_stamp/1000.0));
 			puts("");
-			int temp_incr;
+		*/
 		/*
+			int temp_incr;
 			for (temp_incr=0;temp_incr<RS_NUM_ACTUAL_DATA_BYTES;temp_incr++){
 				if (!(temp_incr % 25))
 					puts("");
@@ -300,9 +307,9 @@ static int transfer(int fd)
 		printf("%.2X ", rx[ret]);
 
 	}
-	*/
-	puts("");
 	
+	puts("");
+	*/
 	return ret_val;
     
 }
@@ -427,7 +434,7 @@ int main(int argc, char *argv[])
 		tx[offset+2]='A';
 		tx[offset+3]=i+0x31;//add '1' for ASCII offset
 	}
-	uint8_t input_buffer[RS_NUM_ACTUAL_DATA_BYTES+2]={'{',};
+	//uint8_t input_buffer[RS_NUM_ACTUAL_DATA_BYTES+2]={'{',};
 	keep_alive=1;
 	signal(SIGINT, ctrlc);
 	init_rs();
@@ -504,7 +511,7 @@ int main(int argc, char *argv[])
 		FD_ZERO(&readfds);
 		FD_SET(host_sock, &readfds);
 		tv.tv_sec = 0;
-		tv.tv_usec = 3000;
+		tv.tv_usec = 15000;
 		ret = select(host_sock+1, &readfds, NULL, NULL, &tv);
 		
 		if (ret == -1) {
@@ -523,9 +530,19 @@ int main(int argc, char *argv[])
 				//datagram[z] = 0;//replace \n with NULL
 				datagram[z] = 0;//replace \n with NULL
 			
-				for(ret=0;ret<NUM_BOARDS;ret++){
-					memcpy(&tx[RS_BYTES_SENT*ret],&datagram[0],RS_NUM_ACTUAL_DATA_BYTES);
-					printf("tx buff:\nSTART%sEND\n",&tx[RS_BYTES_SENT*ret]);
+				for (i=0;i<NUM_BOARDS;i++){
+				
+					memcpy(&tx[RS_BYTES_SENT*i],&datagram[0],RS_NUM_ACTUAL_DATA_BYTES);
+					printf("tx buff:\nSTART%sEND\n",&tx[RS_BYTES_SENT*i]);
+					//this could be made simpler using fewer copies---but this is no longer time-critical
+					memcpy(&rs_buff[0],&tx[i*RS_BYTES_SENT],RS_NUM_ACTUAL_DATA_BYTES);
+					//no need to encode data if all data is zero
+					//should really just send already encoded message, don't do that here!!
+					encode_rs(&rs_buff[0],&rs_buff[KK]);
+					memcpy(&tx[i*RS_BYTES_SENT],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
+					memcpy(&tx[(i*RS_BYTES_SENT)+RS_NUM_ACTUAL_DATA_BYTES],&rs_buff[KK],RS_NUM_PARITY_BYTES);
+					//printf("Sending %.*s %li\n", RS_BYTES_SENT, &tx[i*RS_BYTES_SENT],(i*RS_BYTES_SENT));
+					
 				}
 			
 				ret=transfer(fd);
