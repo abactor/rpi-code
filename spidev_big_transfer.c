@@ -34,7 +34,7 @@
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
 int keep_alive;
-
+int spi_interval=20000;
 char *host_ip = "127.0.0.1"; 	//Here we have used localhost address for host machine 
 short host_port = 1234; 
 int host_sock;
@@ -123,6 +123,57 @@ void set_conio_terminal_mode()
     cfmakeraw(&new_termios);
     //tcsetattr(0, TCSANOW, &new_termios);
 	tcsetattr(0, TCSADRAIN, &new_termios);
+}
+
+int decode_data(){
+int ret,i,ret_indx;
+	int er_pos[RS_NUM_PARITY_BYTES];
+	int num_ers=0;
+	int ret_val=0;
+	struct timeval tick,tock;
+	long tdiff;
+ for (ret_indx=0;ret_indx<(NUM_BOARDS*RS_BYTES_SENT);ret_indx+=RS_BYTES_SENT){
+		memcpy(&rs_buff[0],&rx[ret_indx],RS_NUM_ACTUAL_DATA_BYTES);
+		memcpy(&rs_buff[KK],&rx[ret_indx+RS_NUM_ACTUAL_DATA_BYTES],RS_NUM_PARITY_BYTES);
+		/*
+		if (rs_buff[0]!='{'){//not properly framed, throw it out?
+			er_pos[0]=0;
+			num_ers=1;
+//			printf("\nFirst byte \'{\' erased from board %u\n",(ret_indx/RS_BYTES_SENT));
+		}
+		else{
+			num_ers=0;
+		}
+		*/
+		gettimeofday(&tick, NULL);
+		i=eras_dec_rs(rs_buff,er_pos,num_ers);		//decode data
+		gettimeofday(&tock, NULL);
+		
+		tdiff=1000000*((long)tock.tv_sec-(long)tick.tv_sec);	//seconds to microseconds
+		tdiff+=((long)tock.tv_usec-(long)tick.tv_usec);		//add microseconds		
+		/*
+		printf("time to decode: %.3f ms\n",(double)(tdiff/1000.0));
+		if (i==-1){
+			puts("Too many errors to decode.");
+		}
+		else if(i>0){
+			printf("%u errors found\n",i);
+		}
+		*/
+		if(i>0){
+			memcpy(&rx[ret_indx],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	//if data is corrected, copy it over---return corrected
+	//		printf("%u Bytes corrected from board #%u\n",i,(ret_indx/RS_BYTES_SENT));
+			ret_val+=i;
+		}
+		if(i==0){
+		
+	//		printf("All bytes correct from board #%u\n",(ret_indx/RS_BYTES_SENT));
+		}
+		if(i==-1){
+			//printf("Too many corrupted bytes from board #%u\n",(ret_indx/RS_BYTES_SENT));
+			ret_val=-1;
+		}
+	}
 }
 
 int kbhit()
@@ -222,48 +273,7 @@ static int transfer(int fd){
 		
 //perhaps move this to outside transfer call
 //data only needs to be decoded before it's used
-    for (ret_indx=0;ret_indx<(NUM_BOARDS*RS_BYTES_SENT);ret_indx+=RS_BYTES_SENT){
-		memcpy(&rs_buff[0],&rx[ret_indx],RS_NUM_ACTUAL_DATA_BYTES);
-		memcpy(&rs_buff[KK],&rx[ret_indx+RS_NUM_ACTUAL_DATA_BYTES],RS_NUM_PARITY_BYTES);
-		/*
-		if (rs_buff[0]!='{'){//not properly framed, throw it out?
-			er_pos[0]=0;
-			num_ers=1;
-//			printf("\nFirst byte \'{\' erased from board %u\n",(ret_indx/RS_BYTES_SENT));
-		}
-		else{
-			num_ers=0;
-		}
-		*/
-		gettimeofday(&tick, NULL);
-		i=eras_dec_rs(rs_buff,er_pos,num_ers);		//decode data
-		gettimeofday(&tock, NULL);
-		
-		tdiff=1000000*((long)tock.tv_sec-(long)tick.tv_sec);	//seconds to microseconds
-		tdiff+=((long)tock.tv_usec-(long)tick.tv_usec);		//add microseconds		
-		/*
-		printf("time to decode: %.3f ms\n",(double)(tdiff/1000.0));
-		if (i==-1){
-			puts("Too many errors to decode.");
-		}
-		else if(i>0){
-			printf("%u errors found\n",i);
-		}
-		*/
-		if(i>0){
-			memcpy(&rx[ret_indx],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);	//if data is corrected, copy it over---return corrected
-	//		printf("%u Bytes corrected from board #%u\n",i,(ret_indx/RS_BYTES_SENT));
-			ret_val+=i;
-		}
-		if(i==0){
-		
-	//		printf("All bytes correct from board #%u\n",(ret_indx/RS_BYTES_SENT));
-		}
-		if(i==-1){
-			//printf("Too many corrupted bytes from board #%u\n",(ret_indx/RS_BYTES_SENT));
-			ret_val=-1;
-		}
-	}
+   
 	
 	//puts("");
 	//puts("Now for returned");
@@ -326,6 +336,7 @@ static void print_usage(const char *prog)
 	     "  -O --cpol     clock polarity\n"
 	     "  -L --lsb      least significant bit first\n"
 	     "  -C --cs-high  chip select active high\n"
+		 "  -i --interval  set SPI Interval (ms)\n"
 	     "  -3 --3wire    SI/SO signals shared\n");
 	exit(1);
 }
@@ -346,16 +357,20 @@ static void parse_opts(int argc, char *argv[])
 			{ "3wire",   0, 0, '3' },
 			{ "no-cs",   0, 0, 'N' },
 			{ "ready",   0, 0, 'R' },
+			{ "interval",   1, 0, 'i' },
 			{ NULL, 0, 0, 0 },
 		};
 		int c;
 
-		c = getopt_long(argc, argv, "D:s:d:b:lHOLC3NR", lopts, NULL);
+		c = getopt_long(argc, argv, "D:s:d:b:i:lHOLC3NR", lopts, NULL);
 
 		if (c == -1)
 			break;
 
 		switch (c) {
+		case 'i':
+			spi_interval=(atoi(optarg)*1000)-1000;//subtract the transfer time from the interval, it's around 1ms for 8MHz, should change this based on speed
+			break;
 		case 'D':
 			device = optarg;
 			break;
@@ -511,7 +526,7 @@ int main(int argc, char *argv[])
 		FD_ZERO(&readfds);
 		FD_SET(host_sock, &readfds);
 		tv.tv_sec = 0;
-		tv.tv_usec = 15000;
+		tv.tv_usec = spi_interval;
 		ret = select(host_sock+1, &readfds, NULL, NULL, &tv);
 		
 		if (ret == -1) {
