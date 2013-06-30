@@ -37,12 +37,15 @@ int keep_alive;
 int spi_interval=20000;
 char *host_ip = "127.0.0.1"; 	//Here we have used localhost address for host machine 
 short host_port = 1234; 
-int host_sock;
+char *remote_ip = "127.0.0.1";
+short remote_port = 1235; 
+int host_sock,remote_sock;
 char datagram[512];
 fd_set readfds;
 struct timeval tv;
 struct timespec ntv;
 struct sockaddr_in host_add;
+struct sockaddr_in remote_add;
 
 static void pabort(const char *s)
 {
@@ -423,6 +426,11 @@ int ret;
 	host_add.sin_addr.s_addr = inet_addr(host_ip);
 	ret = bind(host_sock, (struct sockaddr *)&host_add, sizeof(host_add));
 
+	remote_sock = socket(AF_INET, SOCK_DGRAM, 0);
+	remote_add.sin_family = AF_INET;
+	remote_add.sin_port = htons(remote_port);
+	remote_add.sin_addr.s_addr = inet_addr(remote_ip);
+		
 	return ret;
 
 }
@@ -615,7 +623,7 @@ int main(int argc, char *argv[])
 		ntv.tv_nsec=100;
 	//	nanosleep(&ntv,NULL);
 		sink=transfer(fd);
-		
+		sink = sendto(remote_sock, rx, strlen(rx), 0, (struct sockaddr *)&remote_add, sizeof(remote_add));
 
 		//memset(tx,0,NUM_BOARDS*RS_BYTES_SENT);
 		
@@ -664,6 +672,7 @@ int main(int argc, char *argv[])
 	done:
 		//do cleanup here
 		close(host_sock);
+		close(remote_sock);
 		printf("\r\n\nClosing!\n\n");
 	
 		close(fd);
