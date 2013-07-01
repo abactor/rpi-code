@@ -632,7 +632,7 @@ int main(int argc, char *argv[])
 		//gettimeofday(&tick, NULL);
 		
 		//send data to another program using sockets//
-		sink = sendto(remote_sock, rx, strlen(rx), 0, (struct sockaddr *)&remote_add, sizeof(remote_add));
+		sink = sendto(remote_sock, rx, ARRAY_SIZE(rx), 0, (struct sockaddr *)&remote_add, sizeof(remote_add));
 		
 		/*
 		gettimeofday(&tock, NULL);
