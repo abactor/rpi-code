@@ -452,6 +452,13 @@ int main(int argc, char *argv[])
 	int kbd_buff_len=0;
 	int i;
 	gettimeofday(&time_start, NULL);
+
+	//uint8_t input_buffer[RS_NUM_ACTUAL_DATA_BYTES+2]={'{',};
+	keep_alive=1;
+	signal(SIGINT, ctrlc);
+	init_rs();
+	init_rs_buff();
+	
 	memset(tx,0,numbytes);
 	for (i=0;i<NUM_BOARDS;i++){
 		int offset=i*RS_BYTES_SENT;
@@ -459,12 +466,28 @@ int main(int argc, char *argv[])
 		tx[offset+1]='!';
 		tx[offset+2]='A';
 		tx[offset+3]=i+0x31;//add '1' for ASCII offset
+	
+			//*************
+	
+		//memcpy(&tx[RS_BYTES_SENT*i],&datagram[0],RS_NUM_ACTUAL_DATA_BYTES);
+		printf("tx buff:\nSTART%sEND\n",&tx[RS_BYTES_SENT*i]);
+		//this could be made simpler using fewer copies---but this is no longer time-critical
+		memcpy(&rs_buff[0],&tx[i*RS_BYTES_SENT],RS_NUM_ACTUAL_DATA_BYTES);
+		//no need to encode data if all data is zero
+		//should really just send already encoded message, don't do that here!!
+		encode_rs(&rs_buff[0],&rs_buff[KK]);
+		memcpy(&tx[i*RS_BYTES_SENT],&rs_buff[0],RS_NUM_ACTUAL_DATA_BYTES);
+		memcpy(&tx[(i*RS_BYTES_SENT)+RS_NUM_ACTUAL_DATA_BYTES],&rs_buff[KK],RS_NUM_PARITY_BYTES);
+
+		
+		//**************
+		
 	}
-	//uint8_t input_buffer[RS_NUM_ACTUAL_DATA_BYTES+2]={'{',};
-	keep_alive=1;
-	signal(SIGINT, ctrlc);
-	init_rs();
-	init_rs_buff();
+	
+	
+
+	
+	
 	if(init_sockets()!=0){
 		puts("Problem binding socket!");
 		keep_alive=0;
@@ -515,6 +538,8 @@ int main(int argc, char *argv[])
 	printf("bits per word: %d\n", bits);
 	printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
 
+
+	
 	ret=transfer(fd);
 	
 	//clear buffer to default.
