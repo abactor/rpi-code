@@ -52,10 +52,10 @@ typedef struct board_data{
 	uint8_t 	ring_index;				//[index 2]
 	uint32_t 	time_stamp;				//[index 3-6]
 	
-	uin32_t		last_time_stamp;		//[index 7-10]
+	uint32_t	last_time_stamp;		//[index 7-10]
 	uint8_t		capture_since_transfer;	//[index 11]
 	uint8_t		meta_data[2];			//[index 12-13]
-	uint16_t 	data[BUFFER_LENGTH]		//[index 14-110]
+	uint16_t 	data[BUFFER_LENGTH];		//[index 14-110]
 	
 
 } board_data;
@@ -250,7 +250,7 @@ int main(int argc, char **argv){
 				
 				z=recv(host_sock, &rx[0], sizeof(rx), 0);
 				//datagram[z] = 0;//replace \n with NULL
-				printf("got %i incoming socket data\n\n%s\n\n\n",z,rx);
+				//printf("got %i incoming socket data\n\n%s\n\n\n",z,rx);
 				recvd_flag=1;
 				
 	    		}
@@ -280,12 +280,15 @@ int main(int argc, char **argv){
 			ret=fprintf(fid_log,"\n");
 			for(board_num=0;board_num<NUM_BOARDS;board_num++){	
 			//for better efficiency, this should go within decode_data function
-				memcpy(&my_board_data[board_num],&rx[board_num*RS_BYTES_SENT], ACTUAL_DATA_BYTES);
-				printf("Framing byte is: %c\n",my_board_data[board_num].framing_char);
-				printf("board ID is: %u\n",my_board_data[board_num].board_ID);
-				printf("board ring index is: %u\n",my_board_data[board_num].ring_index);
-				printf("board time stamp is: %lu\n",my_board_data[board_num].time_stamp);
-				printf("board data is: %u\n",my_board_data[board_num].data[my_board_data[board_num].board_ID]);
+				memcpy(&my_board_data[board_num],&rx[board_num*RS_BYTES_SENT], RS_NUM_ACTUAL_DATA_BYTES);
+				if (my_board_data[board_num].board_ID==6){
+					printf("Framing byte is: %c\n",my_board_data[board_num].framing_char);
+					printf("board ID is: %u\n",my_board_data[board_num].board_ID);
+					printf("board ring index is: %u\n",my_board_data[board_num].ring_index);
+					printf("board time stamp is: %lu\n",my_board_data[board_num].time_stamp);
+					printf("board data is: %hi\t%hi\t%hi\t%hi\n",my_board_data[board_num].data[my_board_data[board_num].ring_index%BUFFER_LENGTH],my_board_data[board_num].data[(my_board_data[board_num].ring_index%BUFFER_LENGTH-1)],my_board_data[board_num].data[(my_board_data[board_num].ring_index%BUFFER_LENGTH-2)],my_board_data[board_num].data[(my_board_data[board_num].ring_index%BUFFER_LENGTH-3)]);
+					printf("from indexes: %i\t%i\t%i\t%i\n",my_board_data[board_num].ring_index%BUFFER_LENGTH,my_board_data[board_num].ring_index%BUFFER_LENGTH-1,my_board_data[board_num].ring_index%BUFFER_LENGTH-2,my_board_data[board_num].ring_index%BUFFER_LENGTH-3);
+				}
 			}
 			
 			
