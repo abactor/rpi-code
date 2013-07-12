@@ -33,6 +33,35 @@ dtype rs_buff[NN];
 //will have to change this properly
 int data_in[NUM_BOARDS][RS_BYTES_SENT];
 int data_vals[NUM_BOARDS][RS_NUM_ACTUAL_DATA_BYTES/2];//this is to store the current data
+
+typedef struct board_data{
+	#define MAX_NUM_SIGNALS 	16
+	#define CURRENT_NUM_SIGNALS	4
+	#define META_DATA_WIDTH 	3
+	#define BUFFER_LENGTH 		48
+	#define BUFFER_WORD_SIZE 	2
+	#define DATA_OFFSET 		14
+	#define CLOCK_OFFSET		3
+	#define CLOCK_WORD_SIZE		4
+	#define NEW_DAT_OFFSET		2			
+	#define ID_OFFSET			1
+	///just use pointer arithmetic, no need to memcpy data around---not true, need a local working copy, not the buffer that will get overwritten
+
+	uint8_t 	framing_char;			//[index 0]
+	uint8_t 	board_ID;				//[index 1]
+	uint8_t 	ring_index;				//[index 2]
+	uint32_t 	time_stamp;				//[index 3-6]
+	
+	uin32_t		last_time_stamp;		//[index 7-10]
+	uint8_t		capture_since_transfer;	//[index 11]
+	uint8_t		meta_data[2];			//[index 12-13]
+	uint16_t 	data[BUFFER_LENGTH]		//[index 14-110]
+	
+
+} board_data;
+
+board_data my_board_data[NUM_BOARDS];
+
 uint8_t tx[NUM_BOARDS*RS_BYTES_SENT];
 uint8_t rx[ARRAY_SIZE(tx)] = {0, };
 fd_set readfds;
@@ -247,14 +276,21 @@ int main(int argc, char **argv){
 			recvd_flag=0;
 			printf("decode returned %i\r",ret);
 			int board_num;
-			/*
-			for(board_num=0;board_num<NUM_BOARDS;board_num++){	
-				memcpy(&data_in[board_num][0],&rx[board_num*RS_BYTES_SENT], RS_BYTES_SENT);
-
-			}
-			*/
 			ret=fwrite(rx,2,RS_BYTES_SENT*NUM_BOARDS,fid_log);
 			ret=fprintf(fid_log,"\n");
+			for(board_num=0;board_num<NUM_BOARDS;board_num++){	
+			//for better efficiency, this should go within decode_data function
+				memcpy(&my_board_data[board_num],&rx[board_num*RS_BYTES_SENT], ACTUAL_DATA_BYTES);
+				printf("Framing byte is: %c\n",my_board_data[board_num].framing_char);
+				printf("board ID is: %u\n",my_board_data[board_num].board_ID);
+				printf("board ring index is: %u\n",my_board_data[board_num].ring_index);
+				printf("board time stamp is: %lu\n",my_board_data[board_num].time_stamp);
+				printf("board data is: %u\n",my_board_data[board_num].data[my_board_data[board_num].board_ID]);
+			}
+			
+			
+			
+			
 			
 		}
 	}
