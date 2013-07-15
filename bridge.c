@@ -41,7 +41,7 @@ typedef struct board_data{
 	#define BUFFER_LENGTH 		48
 	#define BUFFER_WORD_SIZE 	2
 	#define DATA_OFFSET 		14
-	#define CLOCK_OFFSET		3
+	#define CLOCK_OFFSET		10
 	#define CLOCK_WORD_SIZE		4
 	#define NEW_DAT_OFFSET		2			
 	#define ID_OFFSET			1
@@ -50,11 +50,10 @@ typedef struct board_data{
 	uint8_t 	framing_char;			//[index 0]
 	uint8_t 	board_ID;				//[index 1]
 	uint8_t 	ring_index;				//[index 2]
-	uint32_t 	time_stamp;				//[index 3-6]
+	uint8_t		num_since_transfer;		//[index 3]
+	uint8_t		meta_data[6];			//[index 4-9]
+	uint32_t 	time_stamp;				//[index 10-13]
 	
-	uint32_t	last_time_stamp;		//[index 7-10]
-	uint8_t		capture_since_transfer;	//[index 11]
-	uint8_t		meta_data[2];			//[index 12-13]
 	uint16_t 	data[BUFFER_LENGTH];		//[index 14-110]
 	
 
@@ -276,18 +275,23 @@ int main(int argc, char **argv){
 			recvd_flag=0;
 			printf("decode returned %i\r",ret);
 			int board_num;
-			ret=fwrite(rx,2,RS_BYTES_SENT*NUM_BOARDS,fid_log);
-			ret=fprintf(fid_log,"\n");
+			//ret=fwrite(rx,2,RS_BYTES_SENT*NUM_BOARDS,fid_log);
+			//ret=fprintf(fid_log,"\n");
 			for(board_num=0;board_num<NUM_BOARDS;board_num++){	
 			//for better efficiency, this should go within decode_data function
 				memcpy(&my_board_data[board_num],&rx[board_num*RS_BYTES_SENT], RS_NUM_ACTUAL_DATA_BYTES);
 				if (my_board_data[board_num].board_ID==6){
-					printf("Framing byte is: %c\n",my_board_data[board_num].framing_char);
-					printf("board ID is: %u\n",my_board_data[board_num].board_ID);
-					printf("board ring index is: %u\n",my_board_data[board_num].ring_index);
-					printf("board time stamp is: %lu\n",my_board_data[board_num].time_stamp);
-					printf("board data is: %hi\t%hi\t%hi\t%hi\n",my_board_data[board_num].data[my_board_data[board_num].ring_index%BUFFER_LENGTH],my_board_data[board_num].data[(my_board_data[board_num].ring_index%BUFFER_LENGTH-1)],my_board_data[board_num].data[(my_board_data[board_num].ring_index%BUFFER_LENGTH-2)],my_board_data[board_num].data[(my_board_data[board_num].ring_index%BUFFER_LENGTH-3)]);
-					printf("from indexes: %i\t%i\t%i\t%i\n",my_board_data[board_num].ring_index%BUFFER_LENGTH,my_board_data[board_num].ring_index%BUFFER_LENGTH-1,my_board_data[board_num].ring_index%BUFFER_LENGTH-2,my_board_data[board_num].ring_index%BUFFER_LENGTH-3);
+					//printf("Framing byte is: %c\n",my_board_data[board_num].framing_char);
+					//printf("board ID is: %u\n",my_board_data[board_num].board_ID);
+					//printf("board ring index is: %u\n",my_board_data[board_num].ring_index);
+					//printf("board time stamp is: %lu\n",my_board_data[board_num].time_stamp);
+					//printf("board data is: %hi\t%hi\t%hi\t%hi\n",my_board_data[board_num].data[0],my_board_data[board_num].data[12],my_board_data[board_num].data[24],my_board_data[board_num].data[36]);
+					printf("from indexes: %i and %i since transfer\n",my_board_data[board_num].ring_index,my_board_data[board_num].num_since_transfer);
+					gettimeofday(&logtime,NULL);
+					//i=fprintf(fid_log,"Log file opened at %s",asctime(localtime(&logtime.tv_sec)));
+					ret=fprintf(fid_log,"board data is: %li\t%hi\t%hi\t%hi\t%hi\t%lu\n",1000*1000*logtime.tv_sec+logtime.tv_usec,my_board_data[board_num].data[0],my_board_data[board_num].data[12],my_board_data[board_num].data[24],my_board_data[board_num].data[36],my_board_data[board_num].time_stamp);
+					
+					
 				}
 			}
 			
