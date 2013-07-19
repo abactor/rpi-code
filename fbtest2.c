@@ -23,6 +23,8 @@
 #include <sys/mman.h>
 #include <math.h>
 #include <time.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 typedef struct bmp{
 #define ROWS	1680
@@ -141,7 +143,7 @@ int main(int argc, char* argv[])
 		//fbp[i]=sprite
 		//xres=1680
 		//yres=1050
-		load_bmp("test.bmp",&my_image)
+		load_bmp("test.bmp",&my_image);
 		memcpy(fbp,&my_image.data[0][0][0],ROWS*COLUMNS*COLOURS);
 		//int xint=(int)(x*vinfo.xres/2)+(vinfo.xres/2);
 		//int yint=(int)(y*vinfo.yres/2)+(vinfo.yres/2);
