@@ -60,6 +60,8 @@ load_bmp(char * file_name, bmp * img){
 	uint32_t pnum;
 	FILE *fp;
 	fp = fopen(file_name, "rb");
+	bmp temp_img;
+	
 	if(fp == NULL) {
 		printf("CANNOT OPEN FILE.  PROGRAM EXITING");
 		return 1;
@@ -74,25 +76,17 @@ load_bmp(char * file_name, bmp * img){
 		printf("%u bytes long\n",pnum);
 		ret=fread(&img->data[0][0][0],1,pnum,fp);
 		printf("%u bytes read from %s\n",ret,(char*)&file_name);
-
+		temp_img=*img;
+		
 		for(xpos=2;xpos<img->img_width;xpos++){
 			for (ypos=2;ypos<img->img_height;ypos++){
-				if ((img->data[xpos][ypos][0]>0)&&(img->data[xpos][ypos][2]>0)&&(img->data[xpos][ypos][2]>0)){
-					/*
-					printf("pixel at %u,%u has colours (RGB) %hu %hu %hu\n", xpos, ypos,
-						img.data[xpos][ypos][0],
-						img.data[xpos][ypos][1],
-						img.data[xpos][ypos][2]);	
-					*/	
-					//printf("%x, %x, %x\n",&img.data[xpos][ypos][0],&img.data[xpos][ypos][1],&img.data[xpos][ypos][2]);
-						
-				}
-			}
-			
-			
+				temp_img[img->img_width-xpos-1][img->img_height-ypos-1][0]=img->data[xpos][ypos][0];
+				temp_img[img->img_width-xpos-1][img->img_height-ypos-1][1]=img->data[xpos][ypos][1];
+				temp_img[img->img_width-xpos-1][img->img_height-ypos-1][2]=img->data[xpos][ypos][2];
+			}			
 		}
+		*img=temp_img;
 		
-	
 	}
 
 	fclose(fp);
