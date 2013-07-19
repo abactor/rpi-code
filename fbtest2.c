@@ -54,6 +54,7 @@ typedef struct bmp{
 
 
 load_bmp(char * file_name, bmp * img){
+	int ret;
 	FILE *fp;
 	fp = fopen(file_name, "rb");
 	if(fp == NULL) {
@@ -61,19 +62,19 @@ load_bmp(char * file_name, bmp * img){
 		return 1;
 	}
 	else {
-		ret=fread(&img, 1, 54, fp);
-		printf("%#06x Should be 0x4D4d\n",img.sig);
-		printf("%u wide, %u high\n",img.img_width,img.img_height);
-		printf("%u hres, %u vres, %hu bit depth\n",img.h_res,img.v_res,img.bit_depth);
-		printf("data offest is: %u\n",img.data_file_offset); 
-		pnum=img.img_width*img.img_height*img.bit_depth/8;
+		ret=fread(img, 1, 54, fp);
+		printf("%#06x Should be 0x4D4d\n",img->sig);
+		printf("%u wide, %u high\n",img->img_width,img->img_height);
+		printf("%u hres, %u vres, %hu bit depth\n",img->h_res,img->v_res,img->bit_depth);
+		printf("data offest is: %u\n",img->data_file_offset); 
+		pnum=img->img_width*img->img_height*img->bit_depth/8;
 		printf("%u bytes long\n",pnum);
-		ret=fread(&img.data[0][0][0],1,pnum,fp);
+		ret=fread(&img->data[0][0][0],1,pnum,fp);
 		printf("%u bytes read from %s\n",ret,(char*)&file_name);
 
-		for(xpos=2;xpos<img.img_width;xpos++){
-			for (ypos=2;ypos<img.img_height;ypos++){
-				if ((img.data[xpos][ypos][0]>0)&&(img.data[xpos][ypos][2]>0)&&(img.data[xpos][ypos][2]>0)){
+		for(xpos=2;xpos<img->img_width;xpos++){
+			for (ypos=2;ypos<img->img_height;ypos++){
+				if ((img->data[xpos][ypos][0]>0)&&(img->data[xpos][ypos][2]>0)&&(img->data[xpos][ypos][2]>0)){
 					/*
 					printf("pixel at %u,%u has colours (RGB) %hu %hu %hu\n", xpos, ypos,
 						img.data[xpos][ypos][0],
