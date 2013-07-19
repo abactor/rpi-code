@@ -52,6 +52,8 @@ typedef struct bmp{
 
 } __attribute__ ((__packed__)) bmp;
 
+bmp temp_img;
+
 
 load_bmp(char * file_name, bmp * img){
 	int ret;
@@ -61,7 +63,6 @@ load_bmp(char * file_name, bmp * img){
 	uint32_t width, height;
 	FILE *fp;
 	fp = fopen(file_name, "rb");
-	bmp temp_img;
 	
 	if(fp == NULL) {
 		printf("CANNOT OPEN FILE.  PROGRAM EXITING");
@@ -78,19 +79,20 @@ load_bmp(char * file_name, bmp * img){
 		pnum=img->img_width*img->img_height*img->bit_depth/8;
 		printf("%u bytes long\n",pnum);
 		ret=fread(&img->data[0][0][0],1,pnum,fp);
-		printf("%u bytes read from %s\n",ret,(char*)&file_name);
-/*		temp_img=*img;
+		printf("%u bytes read from %s\n",ret,(char*)file_name);
+		temp_img=*img;
+		//temp_img.data[0][0][0]=img->data[0][0][0];
 		
-		for(xpos=0;xpos<10;xpos++){
-			for (ypos=0;ypos<10;ypos++){
-				temp_img.data[width-xpos-1][height-ypos-1][0]=img->data[xpos][ypos][0];
-				temp_img.data[width-xpos-1][height-ypos-1][1]=img->data[xpos][ypos][1];
-				temp_img.data[width-xpos-1][height-ypos-1][2]=img->data[xpos][ypos][2];
+		for(xpos=0;xpos<ROWS;xpos++){
+			for (ypos=0;ypos<COLUMNS;ypos++){
+				img->data[xpos][ypos][0]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][0];
+				img->data[xpos][ypos][1]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][1];
+				img->data[xpos][ypos][2]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][2];
 			}			
 		}
-		*img=temp_img;
 		
-*/
+		
+
 	}
 
 	fclose(fp);
