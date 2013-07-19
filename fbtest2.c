@@ -58,6 +58,7 @@ load_bmp(char * file_name, bmp * img){
 	uint32_t xpos;
 	uint32_t ypos;
 	uint32_t pnum;
+	uint32_t width, height;
 	FILE *fp;
 	fp = fopen(file_name, "rb");
 	bmp temp_img;
@@ -70,6 +71,8 @@ load_bmp(char * file_name, bmp * img){
 		ret=fread(img, 1, 54, fp);
 		printf("%#06x Should be 0x4D4d\n",img->sig);
 		printf("%u wide, %u high\n",img->img_width,img->img_height);
+		width=img->img_width;
+		height=img->img_height;
 		printf("%u hres, %u vres, %hu bit depth\n",img->h_res,img->v_res,img->bit_depth);
 		printf("data offest is: %u\n",img->data_file_offset); 
 		pnum=img->img_width*img->img_height*img->bit_depth/8;
@@ -80,9 +83,9 @@ load_bmp(char * file_name, bmp * img){
 		
 		for(xpos=2;xpos<img->img_width;xpos++){
 			for (ypos=2;ypos<img->img_height;ypos++){
-				temp_img[img->img_width-xpos-1][img->img_height-ypos-1][0]=img->data[xpos][ypos][0];
-				temp_img[img->img_width-xpos-1][img->img_height-ypos-1][1]=img->data[xpos][ypos][1];
-				temp_img[img->img_width-xpos-1][img->img_height-ypos-1][2]=img->data[xpos][ypos][2];
+				temp_img.data[width-xpos-1][height-ypos-1][0]=img->data[xpos][ypos][0];
+				temp_img.data[width-xpos-1][height-ypos-1][1]=img->data[xpos][ypos][1];
+				temp_img.data[width-xpos-1][height-ypos-1][2]=img->data[xpos][ypos][2];
 			}			
 		}
 		*img=temp_img;
