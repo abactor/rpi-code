@@ -81,14 +81,14 @@ load_bmp(char * file_name, bmp * img){
 		printf("%u bytes read from %s\n",ret,(char*)&file_name);
 		temp_img=*img;
 		
-		for(xpos=2;xpos<img->img_width;xpos++){
-			for (ypos=2;ypos<img->img_height;ypos++){
+		for(xpos=0;xpos<width;xpos++){
+			for (ypos=0;ypos<height;ypos++){
 				temp_img.data[width-xpos-1][height-ypos-1][0]=img->data[xpos][ypos][0];
 				temp_img.data[width-xpos-1][height-ypos-1][1]=img->data[xpos][ypos][1];
 				temp_img.data[width-xpos-1][height-ypos-1][2]=img->data[xpos][ypos][2];
 			}			
 		}
-		*img=temp_img;
+		//*img=temp_img;
 		
 	}
 
