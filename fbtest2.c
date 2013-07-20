@@ -27,8 +27,8 @@
 #include <sys/types.h>
 
 typedef struct bmp{
-#define ROWS	1680
-#define COLUMNS 1050
+#define COLUMNS	1680
+#define ROWS 1050
 #define COLOURS 3
 	uint16_t 	sig;			//signature must be 0x4D4D
 	uint32_t 	file_size_bytes;	
@@ -83,11 +83,15 @@ load_bmp(char * file_name, bmp * img){
 		temp_img=*img;
 		//temp_img.data[0][0][0]=img->data[0][0][0];
 		
-		for(xpos=0;xpos<ROWS;xpos++){
-			for (ypos=0;ypos<COLUMNS;ypos++){
-				img->data[xpos][ypos][0]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][0];
-				img->data[xpos][ypos][1]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][1];
-				img->data[xpos][ypos][2]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][2];
+
+		for (ypos=0;ypos<COLUMNS;ypos++){
+			for(xpos=0;xpos<ROWS;xpos++){
+				img->data[xpos][ypos][0]=temp_img.data[ROWS-xpos-1][ypos][1];
+				img->data[xpos][ypos][1]=temp_img.data[ROWS-xpos-1][ypos][0];
+				img->data[xpos][ypos][2]=temp_img.data[ROWS-xpos-1][ypos][2];
+//				img->data[xpos][ypos][0]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][0];
+//				img->data[xpos][ypos][1]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][1];
+//				img->data[xpos][ypos][2]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][2];
 			}			
 		}
 		
