@@ -57,7 +57,7 @@ typedef struct bmp{
 
 } __attribute__ ((__packed__)) bmp;
 
-bmp temp_img;
+bmp temp_img;	//this is a local/temporary variable to load_bmp(), yet causes a segfault due to stack size issues on large files if instantiated within load_bmp()
 
 
 int load_bmp(char * file_name, bmp * img){
