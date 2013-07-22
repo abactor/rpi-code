@@ -21,7 +21,6 @@
 #include <fcntl.h>
 #include <linux/fb.h>
 #include <sys/mman.h>
-#include <math.h>
 #include <time.h>
 #include <stdint.h>
 #include <sys/types.h>
