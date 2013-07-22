@@ -1,6 +1,10 @@
 /*
  * fbtest2.c
  *
+*Abactor added bitmap (.bmp) file loading and parsing, and blitting to screen
+*The bitmap parser is specific to 24-bit colours (one byte for each of B-G-R)
+*
+*
  * http://raspberrycompote.blogspot.ie/2013/01/low-level-graphics-on-raspberry-pi-part.html
  *
  * Original work by J-P Rosti (a.k.a -rst- and 'Raspberry Compote')
@@ -26,8 +30,8 @@
 #include <sys/types.h>
 
 typedef struct bmp{
-#define COLUMNS	1680
-#define ROWS 1050
+#define COLUMNS	1680	//these value can be redifined, or changed at runtime based on file paramters
+#define ROWS 1050	//use c99 or malloc to allow for dynamic memory allocation
 #define COLOURS 3
 	uint16_t 	sig;			//signature must be 0x4D4D
 	uint32_t 	file_size_bytes;	
@@ -42,7 +46,7 @@ typedef struct bmp{
 	uint32_t	compression;		//0=none, 1=rle-8, 2=rle-4
 	uint32_t	img_size_bytes;		//image size with padding
 	uint32_t	h_res;			//horizontal resolution
-	uint32_t	v_res;
+	uint32_t	v_res;			//vertical resolution
 	uint32_t	num_colours;
 	uint32_t	num_important_chars;
 	
@@ -55,47 +59,45 @@ bmp temp_img;
 
 
 load_bmp(char * file_name, bmp * img){
+	#define DATA_OFFSET 54					//.bmp files have a static offset
+
 	int ret;
 	uint32_t xpos;
 	uint32_t ypos;
 	uint32_t pnum;
 	uint32_t width, height;
 	FILE *fp;
-	fp = fopen(file_name, "rb");
+	fp = fopen(file_name, "rb");				//open file_name.bmp as binary readable
 	
 	if(fp == NULL) {
 		printf("CANNOT OPEN FILE.  PROGRAM EXITING");
 		return 1;
 	}
 	else {
-		ret=fread(img, 1, 54, fp);
-		printf("%#06x Should be 0x4D4d\n",img->sig);
+		ret=fread(img, 1, DATA_OFFSET, fp);		//read 54 bytes into bmp struct, pointed to by img
+		printf("%#06x Should be 0x4D4d\n",img->sig);	//sanity check on bmp data
 		printf("%u wide, %u high\n",img->img_width,img->img_height);
 		width=img->img_width;
-		height=img->img_height;
+		height=img->img_height;				//printing file height and width
 		printf("%u hres, %u vres, %hu bit depth\n",img->h_res,img->v_res,img->bit_depth);
-		printf("data offest is: %u\n",img->data_file_offset); 
-		pnum=img->img_width*img->img_height*img->bit_depth/8;
-		printf("%u bytes long\n",pnum);
+		printf("data offest is: %u\n",img->data_file_offset);	//data offset should coincide with DATA_OFFSET 
+		pnum=img->img_width*img->img_height*img->bit_depth/8;	//double-checking number of bytes in file
+		printf("%u bytes long\n",pnum);				//should match number of bytes read
 		ret=fread(&img->data[0][0][0],1,pnum,fp);
 		printf("%u bytes read from %s\n",ret,(char*)file_name);
-		temp_img=*img;
-		//temp_img.data[0][0][0]=img->data[0][0][0];
-		
+		temp_img=*img;					//store a temporary copy of the struct
 
-		for (ypos=0;ypos<COLUMNS;ypos++){
+		for (ypos=0;ypos<COLUMNS;ypos++){		//need to re-arrange struct.data[][][]
 			for(xpos=0;xpos<ROWS;xpos++){
-				img->data[xpos][ypos][0]=temp_img.data[ROWS-xpos-1][ypos][1];
-				img->data[xpos][ypos][1]=temp_img.data[ROWS-xpos-1][ypos][0];
-				img->data[xpos][ypos][2]=temp_img.data[ROWS-xpos-1][ypos][2];
-//				img->data[xpos][ypos][0]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][0];
-//				img->data[xpos][ypos][1]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][1];
-//				img->data[xpos][ypos][2]=temp_img.data[ROWS-xpos-1][COLUMNS-ypos-1][2];
-			}			
-		}
-		
-		
+				//bmp files are BGR and frame buffer is RGB so swap the Red and Blue colour indices
+				//bmp files are scanned from bottom left to the right and up, so vertically swap array 
+				//this will likely be quicker to do a memcpy every row at a time instead of pixel-by-pixel copying
 
+				img->data[xpos][ypos][0]=temp_img.data[ROWS-xpos-1][ypos][2];
+				img->data[xpos][ypos][1]=temp_img.data[ROWS-xpos-1][ypos][1];
+				img->data[xpos][ypos][2]=temp_img.data[ROWS-xpos-1][ypos][0];
+			}
+		}
 	}
 
 	fclose(fp);
@@ -129,8 +131,6 @@ int main(int argc, char* argv[])
 	  printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, 
 		 vinfo.bits_per_pixel );
 
-	
-	
 	  // map fb to user mem 
 	  screensize = finfo.smem_len;
 	  fbp = (char*)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
@@ -139,35 +139,11 @@ int main(int argc, char* argv[])
 	  }
 	  else {
 	    // draw...
-	    // just fill upper half of the screen with something
-	    //memset(fbp, 0xfa, screensize/2);
-	    // and lower half of the screen with something else
-	    //memset(fbp + screensize/2, 0x18, screensize/2);
 		unsigned int i,j;
 		unsigned int pix_offset;
 
-	
-		//fbp[i]=sprite
-		//xres=1680
-		//yres=1050
-		load_bmp("test.bmp",&my_image);
-		memcpy(fbp,&my_image.data[0][0][0],ROWS*COLUMNS*COLOURS);
-		//int xint=(int)(x*vinfo.xres/2)+(vinfo.xres/2);
-		//int yint=(int)(y*vinfo.yres/2)+(vinfo.yres/2);
-		//printf("x: %f and y %f\n",x,y);
-		//printf("xint: %i and yint %i\n",xint,yint);
-		//xint=xint%vinfo.xres;
-		//yint=yint%vinfo.yres;
-		//pix_offset = xint *3 + yint * finfo.line_length;
-
-	  // now this is about the same as fbp[pix_offset] = value
-	  //*((char*)(fbp + pix_offset)) = 16 * x / vinfo.xres;
-	  /*fbp[pix_offset]=j;
-	  fbp[pix_offset+1]=(j>>8);
-	  fbp[pix_offset+2]=(j>>16);
-		*/	
-		
-	  
+		load_bmp("test.bmp",&my_image);					//open file and load into "bmp" struct
+		memcpy(fbp,&my_image.data[0][0][0],ROWS*COLUMNS*COLOURS);	//blit array to the screen
 	}
   
 
