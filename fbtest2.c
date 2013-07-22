@@ -3,8 +3,9 @@
  *
 *Abactor added bitmap (.bmp) file loading and parsing, and blitting to screen
 *The bitmap parser is specific to 24-bit colours (one byte for each of B-G-R)
-*
-*
+*To ensure that your screen is setup properly for this example, run "fbset -g 1680 1050 1680 1050 24" from the terminal before running ./fbtest2
+*"fbset -depth 24" will change only the color bit-depth
+ *
  * http://raspberrycompote.blogspot.ie/2013/01/low-level-graphics-on-raspberry-pi-part.html
  *
  * Original work by J-P Rosti (a.k.a -rst- and 'Raspberry Compote')
