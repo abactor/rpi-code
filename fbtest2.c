@@ -29,6 +29,7 @@
 #include <time.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 
 typedef struct bmp{
 #define COLUMNS	1680	//these value can be redifined, or changed at runtime based on file paramters
@@ -59,14 +60,13 @@ typedef struct bmp{
 bmp temp_img;
 
 
-load_bmp(char * file_name, bmp * img){
+int load_bmp(char * file_name, bmp * img){
 	#define DATA_OFFSET 54					//.bmp files have a static offset
 
 	int ret;
 	uint32_t xpos;
 	uint32_t ypos;
 	uint32_t pnum;
-	uint32_t width, height;
 	FILE *fp;
 	fp = fopen(file_name, "rb");				//open file_name.bmp as binary readable
 	
@@ -78,8 +78,6 @@ load_bmp(char * file_name, bmp * img){
 		ret=fread(img, 1, DATA_OFFSET, fp);		//read 54 bytes into bmp struct, pointed to by img
 		printf("%#06x Should be 0x4D4d\n",img->sig);	//sanity check on bmp data
 		printf("%u wide, %u high\n",img->img_width,img->img_height);
-		width=img->img_width;
-		height=img->img_height;				//printing file height and width
 		printf("%u hres, %u vres, %hu bit depth\n",img->h_res,img->v_res,img->bit_depth);
 		printf("data offest is: %u\n",img->data_file_offset);	//data offset should coincide with DATA_OFFSET 
 		pnum=img->img_width*img->img_height*img->bit_depth/8;	//double-checking number of bytes in file
@@ -102,6 +100,7 @@ load_bmp(char * file_name, bmp * img){
 	}
 
 	fclose(fp);
+	return 0;
 }
 
 int main(int argc, char* argv[])
@@ -140,11 +139,11 @@ int main(int argc, char* argv[])
 	  }
 	  else {
 	    // draw...
-		unsigned int i,j;
-		unsigned int pix_offset;
 
-		load_bmp("test.bmp",&my_image);					//open file and load into "bmp" struct
-		memcpy(fbp,&my_image.data[0][0][0],ROWS*COLUMNS*COLOURS);	//blit array to the screen
+		int ret=load_bmp("test.bmp",&my_image);					//open file and load into "bmp" struct
+		if (ret==0){
+			memcpy(fbp,&my_image.data[0][0][0],ROWS*COLUMNS*COLOURS);		//blit array to the screen
+		}
 	}
   
 
