@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-#../test_programs/sham&
-sudo ./spidev_big_transfer -D /dev/spidev0.1 -s 8000000 -i 35

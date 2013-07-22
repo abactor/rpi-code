@@ -1,4 +1,0 @@
-#!/bin/sh
-#sudo ./spidev_test3 -D /dev/spidev0.1 -s 50000
-sudo ./spidev_test3 -D /dev/spidev0.1 -s 8000000
-
